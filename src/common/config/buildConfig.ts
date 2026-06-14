@@ -23,10 +23,10 @@ import {DEFAULT_ACADEMY_LINK, DEFAULT_HELP_LINK, DEFAULT_UPGRADE_LINK} from '../
  * @prop {[]} allowedProtocols - Defines which protocols should be automatically allowed
  */
 const buildConfig: BuildConfig = {
-    defaultServers: [/*
+    defaultServers: [
     {
-      name: 'example',
-      url: 'https://example.com'
+      name: 'Go Smart Mortgage',
+      url: 'https://chat.gosmartmortgage.com'
     }
   */],
     helpLink: DEFAULT_HELP_LINK,
