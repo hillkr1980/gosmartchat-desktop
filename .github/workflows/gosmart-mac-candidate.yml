@@ -11,14 +11,16 @@ concurrency:
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: arm64
-            runner: macos-15
           - arch: x64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-15-intel
+          - arch: universal
             runner: macos-15-intel
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -29,6 +31,14 @@ jobs:
           repository: mattermost/desktop
           ref: 45944fb07a70f08587b25719c8c88c71f16ff920
           persist-credentials: false
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.sha }}
+          path: brand-input
+          sparse-checkout: gosmart-build/brand
+          persist-credentials: false
+      - name: Locate verified brand inputs
+        run: mv brand-input/gosmart-build/brand/* brand-input/
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: '24'
@@ -40,14 +50,13 @@ jobs:
       - name: Verify and apply existing Go Smart branding
         shell: python3 {0}
         run: |
-          import hashlib,json,pathlib,subprocess,urllib.request
+          import hashlib,json,pathlib,subprocess
           assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() == '45944fb07a70f08587b25719c8c88c71f16ff920'
           manifest=json.loads("[{\"asset\":\"appicon_48.png\",\"sha256\":\"172bd733ef75bc631b346607f8ec66bf11dfb01022ded862619ec60ca47e6a77\"},{\"asset\":\"appicon_with_spacing_32.png\",\"sha256\":\"898048d91a837a324ffaf59776a1e029291692a39e857238c7c657bc0437fffc\"},{\"asset\":\"icns_temp/icon_1024x1024.png\",\"sha256\":\"b405ff0504bf7957dcb25d9cacfa8d7c98edec1a0704768f4ff214edf21cb96a\"},{\"asset\":\"icns_temp/icon_128x128.png\",\"sha256\":\"bd1a861e40e6950395e7e5b5f2c9ff6acabef2fd3625dc60599f343238169607\"},{\"asset\":\"icns_temp/icon_16x16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"icns_temp/icon_256x256.png\",\"sha256\":\"de4f51af284fabbbcf8b291199814e945713a4e15a6c5e3c9040d349ff1f6dd2\"},{\"asset\":\"icns_temp/icon_32x32.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"icns_temp/icon_512x512.png\",\"sha256\":\"d70a6471e503e68b8b35dcfebe45a2c2f8171f881469b3860c73d17a9378a120\"},{\"asset\":\"icns_temp/icon_64x64.png\",\"sha256\":\"a167936dccbb1d069cf97cf222875b45e2f983d1a0f065265e09c73e61817878\"},{\"asset\":\"icon.icns\",\"sha256\":\"cca4f836bcfcdb756f32fe64da6d4d41643016052ca3934da1f5f2669a44fd06\"},{\"asset\":\"icon.ico\",\"sha256\":\"a1478e6d6e580c63e40c3592df6136cb7d583c7aa5f20f2d6f5e07005490a93e\"},{\"asset\":\"icon.png\",\"sha256\":\"b405ff0504bf7957dcb25d9cacfa8d7c98edec1a0704768f4ff214edf21cb96a\"},{\"asset\":\"linux/app_icon.png\",\"sha256\":\"d70a6471e503e68b8b35dcfebe45a2c2f8171f881469b3860c73d17a9378a120\"},{\"asset\":\"linux/top_bar_dark_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_dark_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"linux/top_bar_dark_mention_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_dark_mention_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"linux/top_bar_dark_unread_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_dark_unread_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"linux/top_bar_light_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_light_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"linux/top_bar_light_mention_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_light_mention_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"linux/top_bar_light_unread_16.png\",\"sha256\":\"af781103940717ff1bf25139086719a175ef5505b5352ea1a3724feca77bca62\"},{\"asset\":\"linux/top_bar_light_unread_16@2x.png\",\"sha256\":\"3a35830a28f54997bed4f8344d8d4bbe80e4376265467af2cd11c7d50500de29\"},{\"asset\":\"osx/DMG_BG.png\",\"sha256\":\"8365618cefd286bc1be240a537bd0f46d17919895d0f6674680bacbafc97694e\"},{\"asset\":\"osx/menuIcons/MenuIcon16Template.png\",\"sha256\":\"44efc22bdccacbb82f55427ba847ef6ebc679f05936caf1c6d7aca59f1177b48\"},{\"asset\":\"osx/menuIcons/MenuIcon16Template@2x.png\",\"sha256\":\"c1a70bf15cb4303015cb462a4d9a5ec2e1589e2a28b3483813312d34fb8121a8\"},{\"asset\":\"osx/menuIcons/MenuIcon20Template.png\",\"sha256\":\"f76548a0b2045b4dc2571771b63cb300575dd29d1fc3a4dd4aa82df41c7e3607\"},{\"asset\":\"osx/menuIcons/MenuIcon20Template@2x.png\",\"sha256\":\"435bdef91807cae0762ae5ff717add9e9d11bcdd39fe64fa5d0d429c439d9b0c\"},{\"asset\":\"osx/menuIcons/MenuIcon24Template.png\",\"sha256\":\"07f13680127ce22bb5bcd49314948e5d4c224eb82137b3261edfcb8fe6e1a5fd\"},{\"asset\":\"osx/menuIcons/MenuIcon24Template@2x.png\",\"sha256\":\"06b81c70c8dacf23fe645cd70c5f6430a4eba0354a8ce5691f818e70701651bb\"},{\"asset\":\"osx/menuIcons/MenuIcon32Template.png\",\"sha256\":\"e27717b3da6696429783de37a751eb3839f6526885be54d51616f2ee1286e2df\"},{\"asset\":\"osx/menuIcons/MenuIcon32Template@2x.png\",\"sha256\":\"f19585a8d225dd2573f284e9b9f122191da50e79ebb2f21dc572da24a5c79405\"},{\"asset\":\"osx/menuIcons/MenuIconUnread16Template.png\",\"sha256\":\"491ffb82f8bd94bd500e1b5072ec88f6aacca8f8463e89c980b949fec08bc46d\"},{\"asset\":\"osx/menuIcons/MenuIconUnread16Template@2x.png\",\"sha256\":\"daf8e90eaaccb4e0416a2bb2c88e211728dc71ab9944e19273ef81245daaf031\"},{\"asset\":\"osx/menuIcons/MenuIconUnread20Template.png\",\"sha256\":\"0ad21156119df9fc932d112ea759610f9bd7d728c42143783580a32554a29e3b\"},{\"asset\":\"osx/menuIcons/MenuIconUnread20Template@2x.png\",\"sha256\":\"fdf085a27439215b24db450d0cd1c780c3d3724189aa78806bb8272804bcda84\"},{\"asset\":\"osx/menuIcons/MenuIconUnread24Template.png\",\"sha256\":\"4c9bd36f3a17d53c890b0c85e11baf6ee55b82b6a714ec7c5ffee6f17ce6e2b2\"},{\"asset\":\"osx/menuIcons/MenuIconUnread24Template@2x.png\",\"sha256\":\"8e0958f8d8fbb26f03e321df8da1cbdc91542504894cf809d7f5e3f226697677\"},{\"asset\":\"osx/menuIcons/MenuIconUnread32Template.png\",\"sha256\":\"a8f69370b858010a12d979675b99da19f985f34bca8dd0be23de9a6bf56bed95\"},{\"asset\":\"osx/menuIcons/MenuIconUnread32Template@2x.png\",\"sha256\":\"98b09b7ed486f9252ed6319c99bb30c183d175c7d03e8c657a27ff2ab115dbe4\"},{\"asset\":\"windows/tray_dark.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"},{\"asset\":\"windows/tray_dark_mention.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"},{\"asset\":\"windows/tray_dark_unread.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"},{\"asset\":\"windows/tray_light.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"},{\"asset\":\"windows/tray_light_mention.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"},{\"asset\":\"windows/tray_light_unread.ico\",\"sha256\":\"6da1688eae8baf4952104cd5a2bab41390e7b1eea864785e3d0576746b67e2d2\"}]")
           for item in manifest:
               relative=item['asset']
               target=pathlib.Path('src/assets')/relative
-              url='https://raw.githubusercontent.com/hillkr1980/gosmartchat-desktop/a56c7d3bba1e9402d5471301ae2bc5981ae09700/src/assets/'+relative
-              data=urllib.request.urlopen(url,timeout=60).read()
+              data=(pathlib.Path('brand-input')/relative).read_bytes()
               assert hashlib.sha256(data).hexdigest()==item['sha256'], relative
               target.parent.mkdir(parents=True,exist_ok=True)
               target.write_bytes(data)
@@ -60,7 +69,7 @@ jobs:
           assert text.count("return 'Mattermost.app';")==1
           p.write_text(text.replace("return 'Mattermost.app';", "return context.packager.appInfo.productFilename + '.app';"))
           config="""const base=require('./electron-builder.ts');
-          module.exports={...base,appId:'Mattermost.Desktop',publish:null,artifactName:'Go-Smart-Chat-6.3.1-CANDIDATE-${arch}.${ext}',mac:{...base.mac,identity:'-',notarize:false,target:['dmg'],icon:'src/assets/icon.icns'}};
+          module.exports={...base,appId:'com.gosmartmortgage.GoSmartChat',publish:null,artifactName:'Go-Smart-Chat-6.3.1-CANDIDATE-${arch}.${ext}',mac:{...base.mac,identity:'-',notarize:false,hardenedRuntime:false,gatekeeperAssess:false,target:['dmg'],icon:'src/assets/icon.icns'}};
           """
           pathlib.Path('electron-builder.gosmart-mac.cjs').write_text(config)
       - name: Install locked dependencies and compile
@@ -72,11 +81,18 @@ jobs:
       - name: Verify bundle identity and local signature
         run: |
           set -euo pipefail
-          APP=$(find release -maxdepth 3 -type d -name 'Go Smart Chat.app' -print -quit)
+          APP=$(find release -maxdepth 2 -type d -name 'Go Smart Chat.app' -not -path '*-temp/*' -print -quit)
           test -n "$APP"
           test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")" = '6.3.1'
-          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'Mattermost.Desktop'
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.gosmartmortgage.GoSmartChat'
           codesign --verify --deep --strict --verbose=2 "$APP"
+          {
+            /usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$APP/Contents/Info.plist"
+            lipo -archs "$APP/Contents/MacOS/Go Smart Chat"
+            lipo -archs "$APP/Contents/Frameworks/Electron Framework.framework/Electron Framework"
+            find "$APP" -name '*.node' -print -exec lipo -archs {} \; || true
+            codesign -dv --verbose=2 "$APP" 2>&1
+          } | tee release/BUNDLE-INFO.txt
           for DMG in release/*.dmg; do hdiutil verify "$DMG"; done
           printf '%s\n' 'TEST CANDIDATE ONLY. Ad-hoc signed; not Developer ID signed or notarized. Original DMG identity comparison, real launch, saved-profile upgrade, login and messaging acceptance still required. Do not replace Apple Chat.dmg.' > release/ACCEPTANCE-LIMITS.txt
           shasum -a 256 release/*.dmg > release/SHA256SUMS.txt
@@ -87,5 +103,6 @@ jobs:
             release/*.dmg
             release/SHA256SUMS.txt
             release/ACCEPTANCE-LIMITS.txt
+            release/BUNDLE-INFO.txt
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 7
