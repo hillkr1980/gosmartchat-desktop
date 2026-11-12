@@ -1,0 +1,78 @@
+name: gosmart-android-candidate-2.45.1
+on:
+  push:
+    branches: [codex/android-chat-2.45.1-20261112]
+    paths: [.github/workflows/gosmart-android-candidate.yml]
+permissions:
+  contents: read
+concurrency:
+  group: gosmart-android-candidate-2.45.1
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      TERM: xterm
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          repository: mattermost/mattermost-mobile
+          ref: 35cf638d988fc96c5981f35d08401a430ce826af
+          persist-credentials: false
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.sha }}
+          path: brand-input
+          sparse-checkout: gosmart-build/android-brand
+          persist-credentials: false
+      - name: Verify and apply existing Go Smart branding
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 35cf638d988fc96c5981f35d08401a430ce826af
+          grep -q 'versionName "2.45.1"' android/app/build.gradle
+          (cd brand-input/gosmart-build/android-brand && sha256sum -c SHA256SUMS)
+          mkdir -p assets/override/release
+          cp -R brand-input/gosmart-build/android-brand/icons brand-input/gosmart-build/android-brand/splash_screen assets/override/release/
+          rm -rf brand-input
+          printf '%s\n' '{"DefaultServerUrl": "https://chat.gosmartmortgage.com", "DefaultServerName": "Go Smart Chat"}' > assets/override/config.json
+          test "$(grep -c 'com.mattermost.rnbeta' android/app/google-services.json)" = 1
+          sed -i 's/com\.mattermost\.rnbeta/com.gosmartmortgage.chat/' android/app/google-services.json
+          test "$(sed -n '836p' fastlane/Fastfile)" = "    ENV['APP_NAME'] = 'Mattermost'"
+          sed -i "836s/.*/    ENV['APP_NAME'] ||= 'Mattermost'/" fastlane/Fastfile
+      - uses: ./.github/actions/prepare-android-build
+        with:
+          sign: false
+      - name: Confirm branding reached generated assets
+        run: |
+          set -euo pipefail
+          grep -q 'chat.gosmartmortgage.com' dist/assets/config.json
+          cmp dist/assets/release/icons/android/mipmap-xxxhdpi/ic_launcher.png assets/override/release/icons/android/mipmap-xxxhdpi/ic_launcher.png
+      - name: Build UNSIGNED candidate
+        env:
+          APP_NAME: Go Smart Chat
+          MAIN_APP_IDENTIFIER: com.gosmartmortgage.chat
+          ORG_GRADLE_PROJECT_reactNativeArchitectures: armeabi-v7a,arm64-v8a
+        run: bundle exec fastlane android unsigned
+        working-directory: ./fastlane
+      - name: Verify package identity
+        run: |
+          set -euo pipefail
+          mv Mattermost-unsigned.apk Go-Smart-Chat-2.45.1-UNSIGNED.apk
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          "$AAPT2" dump badging Go-Smart-Chat-2.45.1-UNSIGNED.apk | grep -E "^(package|application-label:|sdkVersion|targetSdkVersion|native-code)" | tee APK-INFO.txt
+          grep -q "package: name='com.gosmartmortgage.chat'" APK-INFO.txt
+          grep -q "versionName='2.45.1'" APK-INFO.txt
+          grep -q "application-label:'Go Smart Chat'" APK-INFO.txt
+          sha256sum Go-Smart-Chat-2.45.1-UNSIGNED.apk | tee SHA256SUMS.txt
+          printf '%s\n' 'UNSIGNED CANDIDATE. Cannot be installed until signed locally with the private Go Smart key. Device install, login, messaging and notification acceptance still required.' > ACCEPTANCE-LIMITS.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Go-Smart-Chat-Android-2.45.1-UNSIGNED
+          path: |
+            Go-Smart-Chat-2.45.1-UNSIGNED.apk
+            APK-INFO.txt
+            SHA256SUMS.txt
+            ACCEPTANCE-LIMITS.txt
+          if-no-files-found: error
+          retention-days: 7
